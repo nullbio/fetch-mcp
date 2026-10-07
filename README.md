@@ -32,7 +32,49 @@ Configure your MCP client with the absolute path to this checkout:
 }
 ```
 
-Rebuild after updating the checkout. These instructions run this fork's built code directly.
+These instructions run this fork's built code directly.
+
+### Claude Code
+
+After building, run this command from the repository directory:
+
+```bash
+claude mcp add --scope user --transport stdio fetch-fork -- \
+  node "$(pwd)/dist/index.js"
+```
+
+The command saves the absolute path to this checkout. User scope makes the server available across your projects, and Claude Code starts the process automatically.
+
+Restart Claude Code, run `/mcp`, and confirm that `fetch-fork` is connected. For example, ask:
+
+> Use fetch-fork's fetch_readable tool to fetch https://en.wikipedia.org/wiki/Model_Context_Protocol and summarize it.
+
+If you previously configured the upstream fetch server, remove its entry to avoid duplicate tools. See the [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) for configuration scopes and server management.
+
+### Codex
+
+After building, run this command from the repository directory:
+
+```bash
+codex mcp add fetch-fork -- node "$(pwd)/dist/index.js"
+```
+
+This registers the server in your user-level Codex configuration. Restart Codex to load it, then use `/mcp` in the terminal UI to check the connection. You can inspect the saved configuration with `codex mcp get fetch-fork`.
+
+Ask Codex to use `fetch-fork` when retrieving URLs. See the [Codex MCP documentation](https://developers.openai.com/codex/mcp) for configuration details.
+
+### Updating an existing installation
+
+After updating this checkout to the reviewed commit you want to run, rebuild it:
+
+```bash
+pnpm install --frozen-lockfile --ignore-scripts
+pnpm test
+pnpm typecheck
+pnpm build
+```
+
+Restart your MCP client to load the new build. You do not need to register the server again unless you move the checkout.
 
 ## Tools
 
