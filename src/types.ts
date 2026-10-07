@@ -1,37 +1,28 @@
 import { z } from "zod";
 
-const parsedLimit = Number.parseInt(process.env.DEFAULT_LIMIT ?? "5000");
-export const downloadLimit = Number.isNaN(parsedLimit) ? 5000 : parsedLimit;
+function envInteger(name: string, fallback: number, minimum: number): number {
+  const value = process.env[name];
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(parsed) || parsed < minimum || parsed > 2147483647) {
+    throw new Error(`${name} must be an integer between ${minimum} and 2147483647`);
+  }
+  return parsed;
+}
 
-const parsedMaxBytes = Number.parseInt(process.env.MAX_RESPONSE_BYTES ?? "10485760"); // 10MB
-export const maxResponseBytes = Number.isNaN(parsedMaxBytes) ? 10485760 : parsedMaxBytes;
+export const downloadLimit = envInteger("DEFAULT_LIMIT", 5000, 0);
+export const maxResponseBytes = envInteger("MAX_RESPONSE_BYTES", 10485760, 1);
+export const requestTimeoutMs = envInteger("REQUEST_TIMEOUT_MS", 30000, 1);
 
 export const RequestPayloadSchema = z.object({
   url: z.string().url(),
   headers: z.record(z.string(), z.string()).optional(),
   max_length: z.number().int().min(0).optional().default(downloadLimit),
   start_index: z.number().int().min(0).optional().default(0),
-  proxy: z.string().url().optional(),
+}).strict();
+
+export type RequestPayload = z.input<typeof RequestPayloadSchema>;
+export const YouTubeTranscriptPayloadSchema = RequestPayloadSchema.extend({
+  lang: z.string().regex(/^[a-zA-Z0-9-]{1,35}$/).optional().default("en"),
 });
-
-// Make sure TypeScript treats the fields as optional with defaults
-export type RequestPayload = {
-  url: string;
-  headers?: Record<string, string>;
-  max_length?: number;
-  start_index?: number;
-  proxy?: string;
-};
-
-export const YouTubeTranscriptPayloadSchema = z.object({
-  url: z.string().url(),
-  headers: z.record(z.string(), z.string()).optional(),
-  max_length: z.number().int().min(0).optional().default(downloadLimit),
-  start_index: z.number().int().min(0).optional().default(0),
-  proxy: z.string().url().optional(),
-  lang: z.string().optional().default("en"),
-});
-
-export type YouTubeTranscriptPayload = RequestPayload & {
-  lang?: string;
-};
+export type YouTubeTranscriptPayload = z.input<typeof YouTubeTranscriptPayloadSchema>;

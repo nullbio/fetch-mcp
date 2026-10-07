@@ -1,4 +1,6 @@
-import { describe, it, expect, afterEach, beforeEach, jest } from "bun:test";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+const jest = vi;
+import undici from "undici";
 import dns from "node:dns";
 import { Fetcher } from "./Fetcher";
 
@@ -28,23 +30,18 @@ const sampleHtml = `<!DOCTYPE html>
 </html>`;
 
 function mockFetchWith(content: string, contentType = "text/html") {
-  globalThis.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    text: () => Promise.resolve(content),
-    json: () => Promise.resolve(JSON.parse(content)),
-    headers: new Headers({ "content-type": contentType }),
-  }) as any;
+  undici.fetch = jest.fn().mockImplementation(() => Promise.resolve(new Response(content, { headers: { "content-type": contentType } }))) as any;
 }
 
-const originalFetch = globalThis.fetch;
+const originalFetch = undici.fetch;
 
 describe("Fetcher — fixture tests", () => {
   beforeEach(() => {
-    dns.promises.lookup = (async () => ({ address: "93.184.216.34", family: 4 })) as any;
+    dns.promises.lookup = (async () => ([{ address: "93.184.216.34", family: 4 }])) as any;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    undici.fetch = originalFetch;
     dns.promises.lookup = originalLookup;
   });
 

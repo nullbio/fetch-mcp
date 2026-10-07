@@ -1,6 +1,5 @@
-import { describe, it, expect, jest, beforeEach, afterAll } from "bun:test";
-import { parseArgs, type ParsedArgs } from "./cli";
-import { Fetcher } from "./Fetcher";
+import { describe, it, expect, afterAll } from "vitest";
+import { parseArgs } from "./cli";
 
 // Save originals
 const originalExit = process.exit;
@@ -38,8 +37,6 @@ function restoreIO() {
 
 describe("parseArgs", () => {
   it("parses a basic subcommand and URL", () => {
-    // Temporarily override exit/write to prevent test from exiting
-    const orig = process.exit;
     const result = parseArgs(["html", "https://example.com"]);
     expect(result.subcommand).toBe("html");
     expect(result.url).toBe("https://example.com");
@@ -51,13 +48,11 @@ describe("parseArgs", () => {
       "https://example.com",
       "--max-length", "1000",
       "--start-index", "50",
-      "--proxy", "http://proxy:8080",
     ]);
     expect(result.subcommand).toBe("markdown");
     expect(result.url).toBe("https://example.com");
     expect(result.maxLength).toBe(1000);
     expect(result.startIndex).toBe(50);
-    expect(result.proxy).toBe("http://proxy:8080");
   });
 
   it("parses youtube with --lang flag", () => {
@@ -180,14 +175,14 @@ describe("parseArgs", () => {
     expect(cap.stderr).toContain("--start-index requires a non-negative integer");
   });
 
-  it("exits with error when --proxy has no value", () => {
+  it("rejects the removed --proxy flag", () => {
     const cap = captureExit();
     try {
       parseArgs(["html", "https://example.com", "--proxy"]);
     } catch {}
     restoreIO();
     expect(cap.code).toBe(1);
-    expect(cap.stderr).toContain("--proxy requires a value");
+    expect(cap.stderr).toContain("Unknown flag: --proxy");
   });
 
   it("exits with error when --lang has no value", () => {
@@ -200,14 +195,14 @@ describe("parseArgs", () => {
     expect(cap.stderr).toContain("--lang requires a value");
   });
 
-  it("exits with error when --proxy value looks like a flag", () => {
+  it("rejects --proxy even when other flags follow", () => {
     const cap = captureExit();
     try {
       parseArgs(["html", "https://example.com", "--proxy", "--max-length", "100"]);
     } catch {}
     restoreIO();
     expect(cap.code).toBe(1);
-    expect(cap.stderr).toContain("--proxy requires a value");
+    expect(cap.stderr).toContain("Unknown flag: --proxy");
   });
 
   it("exits with error on invalid URL", () => {

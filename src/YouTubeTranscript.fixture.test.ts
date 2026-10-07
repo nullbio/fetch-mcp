@@ -1,4 +1,6 @@
-import { describe, it, expect, afterEach, beforeEach, jest } from "bun:test";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+const jest = vi;
+import undici from "undici";
 import dns from "node:dns";
 import { YouTubeTranscript } from "./YouTubeTranscript";
 import { Fetcher } from "./Fetcher";
@@ -53,17 +55,17 @@ const realPlayerResponse = {
 
 const realPageHtml = `<!DOCTYPE html><html><head><title>Me at the zoo - YouTube</title></head><body><script>var ytInitialPlayerResponse = ${JSON.stringify(realPlayerResponse)};</script></body></html>`;
 
-const originalFetch = globalThis.fetch;
+const originalFetch = undici.fetch;
 
 describe("YouTubeTranscript — fixture tests", () => {
   beforeEach(() => {
-    dns.promises.lookup = (async () => ({ address: "93.184.216.34", family: 4 })) as any;
+    dns.promises.lookup = (async () => ([{ address: "93.184.216.34", family: 4 }])) as any;
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    undici.fetch = originalFetch;
     dns.promises.lookup = originalLookup;
-    Fetcher.hasYtDlp = null;
+
   });
 
   describe("real srv1 XML parsing", () => {
@@ -125,18 +127,11 @@ describe("YouTubeTranscript — fixture tests", () => {
 
   describe("end-to-end with mocked fetch", () => {
     it("fetches page HTML then caption XML and returns formatted transcript", async () => {
-      Fetcher.hasYtDlp = false;
+
       const mockFetch = jest.fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-          text: () => Promise.resolve(realPageHtml),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve(realSrv1Xml),
-        });
-      globalThis.fetch = mockFetch as any;
+        .mockResolvedValueOnce(new Response(realPageHtml))
+        .mockResolvedValueOnce(new Response(realSrv1Xml));
+      undici.fetch = mockFetch as any;
 
       const result = await Fetcher.youtubeTranscript({
         url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
@@ -151,18 +146,11 @@ describe("YouTubeTranscript — fixture tests", () => {
     });
 
     it("falls back to first available track when requested lang is missing", async () => {
-      Fetcher.hasYtDlp = false;
+
       const mockFetch = jest.fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-          text: () => Promise.resolve(realPageHtml),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve(realSrv1Xml),
-        });
-      globalThis.fetch = mockFetch as any;
+        .mockResolvedValueOnce(new Response(realPageHtml))
+        .mockResolvedValueOnce(new Response(realSrv1Xml));
+      undici.fetch = mockFetch as any;
 
       const result = await Fetcher.youtubeTranscript({
         url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
@@ -175,18 +163,11 @@ describe("YouTubeTranscript — fixture tests", () => {
     });
 
     it("selects the correct language track when available", async () => {
-      Fetcher.hasYtDlp = false;
+
       const mockFetch = jest.fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-          text: () => Promise.resolve(realPageHtml),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve(realSrv1Xml),
-        });
-      globalThis.fetch = mockFetch as any;
+        .mockResolvedValueOnce(new Response(realPageHtml))
+        .mockResolvedValueOnce(new Response(realSrv1Xml));
+      undici.fetch = mockFetch as any;
 
       const result = await Fetcher.youtubeTranscript({
         url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
